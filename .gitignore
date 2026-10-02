@@ -1,5 +1,9 @@
 # Dependencies
 node_modules/
+frontend/node_modules/
+*/node_modules/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -47,6 +51,7 @@ ehthumbs.db
 Desktop.ini
 
 # Build outputs
+dist/
 frontend/dist/
 frontend/build/
 *.log
@@ -62,13 +67,9 @@ yarn-error.log*
 # Vercel
 .vercel/
 
-# Coverage
+# Coverage & Cache
 coverage/
 htmlcov/
-.coverage
-.coverage.*
-
-# Cache
 .cache/
 .pytest_cache/
 .mypy_cache/

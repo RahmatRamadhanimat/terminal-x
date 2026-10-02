@@ -9,6 +9,7 @@ type MarketState = {
   setSelectedSymbol: (symbol: string) => void;
   setSymbols: (symbols: SymbolInfo[]) => void;
   updateMarketData: (data: MarketData) => void;
+  batchUpdateMarketData: (dataList: MarketData[]) => void;
   updateCandle: (symbol: string, candle: CandleData) => void;
   setCandles: (symbol: string, candles: CandleData[]) => void;
 };
@@ -24,6 +25,14 @@ export const useMarketStore = create<MarketState>((set) => ({
     set((state) => ({ 
       marketData: { ...state.marketData, [data.symbol]: data } 
     })),
+  batchUpdateMarketData: (dataList) =>
+    set((state) => {
+      const updated = { ...state.marketData };
+      dataList.forEach(item => {
+        updated[item.symbol] = item;
+      });
+      return { marketData: updated };
+    }),
   updateCandle: (symbol, candle) => 
     set((state) => {
       const currentCandles = state.candles[symbol] || [];

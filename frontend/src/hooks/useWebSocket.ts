@@ -25,6 +25,7 @@ const BASE_PRICES: Record<string, { price: number; decimals: number; vol: number
 export const useWebSocket = () => {
   const selectedSymbol = useMarketStore(s => s.selectedSymbol);
   const updateMarketData = useMarketStore(s => s.updateMarketData);
+  const batchUpdateMarketData = useMarketStore(s => s.batchUpdateMarketData);
   const setStatus = useConnectionStore(s => s.setStatus);
   const setIsMock = useConnectionStore(s => s.setIsMock);
   const setLatency = useConnectionStore(s => s.setLatency);
@@ -91,6 +92,8 @@ export const useWebSocket = () => {
         'US30'
       ];
 
+      const updates: MarketData[] = [];
+
       symbolsToUpdate.forEach(sym => {
         const info = BASE_PRICES[sym];
         if (!info) return;
@@ -104,7 +107,7 @@ export const useWebSocket = () => {
         const netChange = Number((nextPrice - base).toFixed(info.decimals));
         const netPercent = Number(((netChange / base) * 100).toFixed(2));
 
-        updateMarketData({
+        updates.push({
           symbol: sym,
           price: nextPrice,
           change: netChange,
@@ -119,11 +122,15 @@ export const useWebSocket = () => {
           spread: Number((info.decimals === 4 ? 0.0002 : 0.2).toFixed(info.decimals))
         });
       });
+
+      if (updates.length > 0) {
+        batchUpdateMarketData(updates);
+      }
     }, 1500);
 
     return () => {
       clearInterval(timer);
       wsService.unsubscribe(selectedSymbol);
     };
-  }, [selectedSymbol, setStatus, setIsMock, setLatency, updateMarketData]);
+  }, [selectedSymbol, setStatus, setIsMock, setLatency, batchUpdateMarketData]);
 };

@@ -29,17 +29,20 @@ const PaperTrading = () => {
 
   // Dynamically update positions' current price and pnl as live market ticks arrive
   useEffect(() => {
-    setPositions(prev => prev.map(p => {
-      const live = marketDataMap[p.symbol];
-      if (!live) return p;
-      const currentPrice = live.price;
-      const pnl = (currentPrice - p.entryPrice) * p.quantity * (p.side === 'BUY' ? 1 : -1);
-      return {
-        ...p,
-        currentPrice,
-        pnl
-      };
-    }));
+    setPositions(prev => {
+      if (prev.length === 0) return prev;
+      return prev.map(p => {
+        const live = marketDataMap[p.symbol];
+        if (!live) return p;
+        const currentPrice = live.price;
+        const pnl = (currentPrice - p.entryPrice) * p.quantity * (p.side === 'BUY' ? 1 : -1);
+        return {
+          ...p,
+          currentPrice,
+          pnl
+        };
+      });
+    });
   }, [marketDataMap]);
 
   const getCurrentPrice = (sym: string) => {

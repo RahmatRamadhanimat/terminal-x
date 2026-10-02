@@ -31,8 +31,11 @@ const Chart: React.FC = () => {
     if (!chartContainerRef.current) return;
 
     const container = chartContainerRef.current;
-    const width = container.clientWidth || 600;
-    const height = container.clientHeight || 400;
+    // Clear any leftover DOM nodes (especially in React 19 StrictMode)
+    container.innerHTML = '';
+
+    const width = Math.max(container.clientWidth || 400, 200);
+    const height = Math.max(container.clientHeight || 300, 150);
 
     const chart = createChart(container, {
       width,
@@ -73,7 +76,7 @@ const Chart: React.FC = () => {
       priceFormat: {
         type: 'volume',
       },
-      priceScaleId: '', // set as overlay
+      priceScaleId: '',
     });
 
     volumeSeries.priceScale().applyOptions({
@@ -89,11 +92,9 @@ const Chart: React.FC = () => {
 
     // Crosshair move handler for legend
     chart.subscribeCrosshairMove(param => {
-      if (!param || !param.time || !param.seriesData) {
-        return;
-      }
-      const candle = param.seriesData.get(candleSeries) as CandlestickData;
-      if (candle) {
+      if (!param || !param.time || !param.seriesData) return;
+      const candle = param.seriesData.get(candleSeries) as CandlestickData | undefined;
+      if (candle && typeof candle.open === 'number') {
         setOhlc({
           open: candle.open,
           high: candle.high,
@@ -103,20 +104,34 @@ const Chart: React.FC = () => {
       }
     });
 
-    // Resize observer
-    const resizeObserver = new ResizeObserver(entries => {
-      if (entries[0] && chartRef.current) {
-        const { width: newWidth, height: newHeight } = entries[0].contentRect;
-        if (newWidth > 0 && newHeight > 0) {
+    // Debounced ResizeObserver using requestAnimationFrame to prevent feedback loops
+    let animationFrameId: number;
+    let lastWidth = width;
+    let lastHeight = height;
+
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        if (!container || !chartRef.current) return;
+        const newWidth = Math.floor(container.clientWidth);
+        const newHeight = Math.floor(container.clientHeight);
+        if (newWidth > 50 && newHeight > 50 && (newWidth !== lastWidth || newHeight !== lastHeight)) {
+          lastWidth = newWidth;
+          lastHeight = newHeight;
           chartRef.current.applyOptions({ width: newWidth, height: newHeight });
         }
-      }
+      });
     });
     resizeObserver.observe(container);
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
-      chart.remove();
+      try {
+        chart.remove();
+      } catch {
+        // Safe ignore
+      }
       chartRef.current = null;
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
@@ -128,30 +143,73 @@ const Chart: React.FC = () => {
     let isCancelled = false;
 
     async function loadData() {
-      const data = await api.getKlines(selectedSymbol, tf);
-      if (isCancelled || !candleSeriesRef.current || !volumeSeriesRef.current) return;
+      try {
+        const data = await api.getKlines(selectedSymbol, tf);
+        if (isCancelled || !candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
 
-      const candles: CandlestickData[] = data.map(d => ({
-        time: (typeof d.time === 'number' && d.time > 10000000000 ? Math.floor(d.time / 1000) : d.time) as UTCTimestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }));
+        if (!Array.isArray(data) || data.length === 0) return;
 
-      const volumes: HistogramData[] = data.map(d => ({
-        time: (typeof d.time === 'number' && d.time > 10000000000 ? Math.floor(d.time / 1000) : d.time) as UTCTimestamp,
-        value: d.volume || 100,
-        color: d.close >= d.open ? 'rgba(0, 200, 83, 0.3)' : 'rgba(255, 23, 68, 0.3)',
-      }));
+        const candles: CandlestickData[] = [];
+        const volumes: HistogramData[] = [];
 
-      candleSeriesRef.current.setData(candles);
-      volumeSeriesRef.current.setData(volumes);
+        data.forEach(d => {
+          if (!d) return;
+          const rawTime = d.time;
+          let parsedTime: UTCTimestamp;
 
-      if (candles.length > 0) {
-        const last = candles[candles.length - 1];
-        setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
-        chartRef.current?.timeScale().fitContent();
+          if (typeof rawTime === 'number') {
+            parsedTime = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as UTCTimestamp;
+          } else {
+            parsedTime = Math.floor(Date.parse(String(rawTime)) / 1000) as UTCTimestamp;
+          }
+
+          if (isNaN(parsedTime)) return;
+
+          const open = Number(d.open) || 100;
+          const high = Math.max(Number(d.high) || open, open, Number(d.close) || open);
+          const low = Math.min(Number(d.low) || open, open, Number(d.close) || open);
+          const close = Number(d.close) || open;
+
+          candles.push({
+            time: parsedTime,
+            open,
+            high,
+            low,
+            close,
+          });
+
+          volumes.push({
+            time: parsedTime,
+            value: Number(d.volume) || 100,
+            color: close >= open ? 'rgba(0, 200, 83, 0.3)' : 'rgba(255, 23, 68, 0.3)',
+          });
+        });
+
+        // Ensure strictly sorted ascending by time without duplicates
+        const uniqueCandles: CandlestickData[] = [];
+        const uniqueVolumes: HistogramData[] = [];
+        const seen = new Set<number>();
+
+        candles.sort((a, b) => (Number(a.time) - Number(b.time)));
+        candles.forEach((c, idx) => {
+          const t = Number(c.time);
+          if (!seen.has(t)) {
+            seen.add(t);
+            uniqueCandles.push(c);
+            uniqueVolumes.push(volumes[idx]);
+          }
+        });
+
+        if (uniqueCandles.length > 0) {
+          candleSeriesRef.current.setData(uniqueCandles);
+          volumeSeriesRef.current.setData(uniqueVolumes);
+
+          const last = uniqueCandles[uniqueCandles.length - 1];
+          setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
+          chartRef.current.timeScale().fitContent();
+        }
+      } catch (err) {
+        console.error('[Chart] Error loading candle data:', err);
       }
     }
 
@@ -180,14 +238,14 @@ const Chart: React.FC = () => {
 
   return (
     <Panel title={`CHART: ${selectedSymbol}`}>
-      <div className="flex flex-col w-full h-full">
+      <div className="flex flex-col w-full h-full overflow-hidden" style={{ minHeight: 0 }}>
         {/* Toolbar */}
-        <div className="chart-toolbar flex flex-row items-center justify-between gap-1 p-1 border-b" style={{ borderColor: '#1f1f2e', minHeight: '32px' }}>
+        <div className="chart-toolbar flex flex-row items-center justify-between gap-1 p-1 border-b select-none" style={{ borderColor: '#1f1f2e', minHeight: '30px' }}>
           <div className="btn-group flex flex-row gap-1">
             {TIME_FRAMES.map(t => (
               <button 
                 key={t} 
-                className="btn btn-sm px-2 py-1 rounded" 
+                className="btn btn-sm px-2 py-0.5 rounded text-xs" 
                 style={{ 
                   backgroundColor: tf === t ? 'var(--accent-blue)' : 'transparent', 
                   color: tf === t ? '#fff' : 'var(--text-muted)' 
@@ -211,7 +269,11 @@ const Chart: React.FC = () => {
         </div>
 
         {/* Canvas Chart Container */}
-        <div className="chart-container flex-1 w-full h-full relative" ref={chartContainerRef}></div>
+        <div 
+          className="chart-container flex-1 w-full" 
+          ref={chartContainerRef}
+          style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', minHeight: 0 }}
+        ></div>
       </div>
     </Panel>
   );
