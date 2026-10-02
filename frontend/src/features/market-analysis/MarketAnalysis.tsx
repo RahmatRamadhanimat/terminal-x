@@ -1,24 +1,25 @@
 import React from 'react';
 import Panel from '../../components/layout/Panel';
 import { useMarketStore } from '../../stores/marketStore';
+import { safeToFixed } from '../../utils/formatters';
 
 const MarketAnalysis: React.FC = () => {
   const selectedSymbol = useMarketStore(s => s.selectedSymbol);
   const marketData = useMarketStore(s => s.marketData[selectedSymbol]);
 
-  const price = marketData?.price ?? 2645.20;
-  const changePercent = marketData?.changePercent ?? 0.15;
+  const price = typeof marketData?.price === 'number' ? marketData.price : 2645.20;
+  const changePercent = typeof marketData?.changePercent === 'number' ? marketData.changePercent : 0.15;
   const isBullish = changePercent >= 0;
 
   const decimals = selectedSymbol === 'EURUSD' || selectedSymbol === 'GBPUSD' ? 4 : selectedSymbol === 'USDJPY' ? 3 : 2;
   const step = price * 0.005;
 
-  const r1 = (price + step).toFixed(decimals);
-  const pp = price.toFixed(decimals);
-  const s1 = (price - step).toFixed(decimals);
+  const r1 = safeToFixed(price + step, decimals);
+  const pp = safeToFixed(price, decimals);
+  const s1 = safeToFixed(price - step, decimals);
 
-  const rsi = (50 + changePercent * 10).toFixed(1);
-  const atr = (price * 0.008).toFixed(decimals);
+  const rsi = safeToFixed(50 + changePercent * 10, 1);
+  const atr = safeToFixed(price * 0.008, decimals);
 
   return (
     <Panel title={`ANALYSIS: ${selectedSymbol}`}>

@@ -3,6 +3,7 @@ import Panel from '../../components/layout/Panel';
 import { api } from '../../services/api';
 import { ScreenerItem } from '../../types';
 import { useMarketStore } from '../../stores/marketStore';
+import { safeToFixed } from '../../utils/formatters';
 
 type FilterPreset = 'ALL' | 'UPTREND' | 'OVERSOLD' | 'HIGH_VOL';
 
@@ -95,7 +96,7 @@ const Screener: React.FC = () => {
                     onClick={() => setSelectedSymbol(d.symbol)}
                   >
                     <td className="p-1 font-bold">{d.symbol}</td>
-                    <td className="p-1 text-right font-mono">{d.price.toFixed(d.symbol.includes('JPY') ? 3 : d.symbol === 'EURUSD' || d.symbol === 'GBPUSD' ? 4 : 2)}</td>
+                    <td className="p-1 text-right font-mono">{safeToFixed(d.price, d.symbol.includes('JPY') ? 3 : d.symbol === 'EURUSD' || d.symbol === 'GBPUSD' ? 4 : 2)}</td>
                     <td className="p-1 text-right font-mono" style={{ color: d.rsi > 60 ? 'var(--accent-green)' : d.rsi < 40 ? 'var(--accent-red)' : 'var(--text-primary)' }}>
                       {d.rsi}
                     </td>

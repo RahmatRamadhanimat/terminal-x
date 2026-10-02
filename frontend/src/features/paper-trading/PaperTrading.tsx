@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMarketStore } from '../../stores/marketStore';
 import Panel from '../../components/layout/Panel';
+import { safeToFixed } from '../../utils/formatters';
 
 interface Position {
   id: string;
@@ -108,7 +109,7 @@ const PaperTrading = () => {
           <div className="portfolio-stat">
             <div className="portfolio-stat-label">Unrealized P/L</div>
             <div className="portfolio-stat-value" style={{ color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-              {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
+              {totalPnl >= 0 ? '+' : ''}{safeToFixed(totalPnl, 2)}
             </div>
           </div>
           <div className="portfolio-stat">
@@ -161,10 +162,10 @@ const PaperTrading = () => {
                   <td style={{ textAlign: 'left', fontWeight: 600 }}>{p.symbol}</td>
                   <td style={{ color: p.side === 'BUY' ? 'var(--accent-green)' : 'var(--accent-red)' }}>{p.side}</td>
                   <td>{p.quantity}</td>
-                  <td>{p.entryPrice.toFixed(2)}</td>
-                  <td>{p.currentPrice.toFixed(2)}</td>
+                  <td>{safeToFixed(p.entryPrice, 2)}</td>
+                  <td>{safeToFixed(p.currentPrice, 2)}</td>
                   <td style={{ color: p.pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 600 }}>
-                    {p.pnl >= 0 ? '+' : ''}{p.pnl.toFixed(2)}
+                    {p.pnl >= 0 ? '+' : ''}{safeToFixed(p.pnl, 2)}
                   </td>
                   <td>
                     <button className="btn btn-sm" onClick={() => closePosition(p.id)}>Close</button>

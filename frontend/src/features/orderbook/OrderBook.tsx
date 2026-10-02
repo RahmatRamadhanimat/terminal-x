@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import Panel from '../../components/layout/Panel';
 import { useMarketStore } from '../../stores/marketStore';
+import { safeToFixed } from '../../utils/formatters';
 
 const OrderBook: React.FC = () => {
   const selectedSymbol = useMarketStore(s => s.selectedSymbol);
@@ -28,7 +29,7 @@ const OrderBook: React.FC = () => {
       });
     }
 
-    const calculatedSpread = (askList[0].price - bidList[0].price).toFixed(decimals);
+    const calculatedSpread = safeToFixed(askList[0].price - bidList[0].price, decimals);
     // Return asks in descending order (highest ask on top) without mutating state
     return {
       asks: [...askList].reverse(),
@@ -56,17 +57,17 @@ const OrderBook: React.FC = () => {
                 className="depth-bar absolute right-0 top-0 h-full" 
                 style={{ backgroundColor: 'rgba(255, 23, 68, 0.15)', width: `${Math.min((a.size / 5) * 100, 100)}%` }}
               ></div>
-              <span className="z-10">{a.price.toFixed(decimals)}</span>
-              <span className="z-10">{a.size.toFixed(2)}</span>
+              <span className="z-10">{safeToFixed(a.price, decimals)}</span>
+              <span className="z-10">{safeToFixed(a.size, 2)}</span>
             </div>
           ))}
         </div>
 
         {/* Spread */}
         <div className="orderbook-spread flex flex-row justify-between items-center py-1 my-1 border-y text-sm font-bold" style={{ borderColor: '#1f1f2e' }}>
-          <span style={{ color: 'var(--accent-green)' }}>{(currentPrice - tickStep).toFixed(decimals)}</span>
+          <span style={{ color: 'var(--accent-green)' }}>{safeToFixed(currentPrice - tickStep, decimals)}</span>
           <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>Spread: {spread}</span>
-          <span style={{ color: 'var(--accent-red)' }}>{(currentPrice + tickStep).toFixed(decimals)}</span>
+          <span style={{ color: 'var(--accent-red)' }}>{safeToFixed(currentPrice + tickStep, decimals)}</span>
         </div>
 
         {/* Bids (Green) */}
@@ -75,10 +76,10 @@ const OrderBook: React.FC = () => {
             <div key={`bid-${i}`} className="orderbook-row flex flex-row justify-between relative my-[1px]" style={{ color: 'var(--accent-green)' }}>
               <div 
                 className="depth-bar absolute right-0 top-0 h-full" 
-                style={{ backgroundColor: 'rgba(0, 200, 83, 0.15)', width: `${Math.min((b.size / 5) * 100, 100)}%` }}
+                style={{ backgroundColor: 'rgba(0, 200, 83, 0.15)', width: `${Math.min(((b.size || 0) / 5) * 100, 100)}%` }}
               ></div>
-              <span className="z-10">{b.price.toFixed(decimals)}</span>
-              <span className="z-10">{b.size.toFixed(2)}</span>
+              <span className="z-10">{safeToFixed(b.price, decimals)}</span>
+              <span className="z-10">{safeToFixed(b.size, 2)}</span>
             </div>
           ))}
         </div>

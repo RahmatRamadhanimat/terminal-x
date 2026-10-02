@@ -12,6 +12,7 @@ import {
 import Panel from '../../components/layout/Panel';
 import { useMarketStore } from '../../stores/marketStore';
 import { api } from '../../services/api';
+import { safeToFixed } from '../../utils/formatters';
 
 const TIME_FRAMES = ['1m', '5m', '15m', '30m', '1H', '4H', '1D', '1W'];
 
@@ -260,10 +261,10 @@ const Chart: React.FC = () => {
           {/* OHLC Bar */}
           {ohlc && (
             <div className="flex flex-row items-center gap-3 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-              <span>O: <strong style={{ color: 'var(--text-primary)' }}>{ohlc.open.toFixed(2)}</strong></span>
-              <span>H: <strong style={{ color: 'var(--accent-green)' }}>{ohlc.high.toFixed(2)}</strong></span>
-              <span>L: <strong style={{ color: 'var(--accent-red)' }}>{ohlc.low.toFixed(2)}</strong></span>
-              <span>C: <strong style={{ color: ohlc.close >= ohlc.open ? 'var(--accent-green)' : 'var(--accent-red)' }}>{ohlc.close.toFixed(2)}</strong></span>
+              <span>O: <strong style={{ color: 'var(--text-primary)' }}>{safeToFixed(ohlc.open, 2)}</strong></span>
+              <span>H: <strong style={{ color: 'var(--accent-green)' }}>{safeToFixed(ohlc.high, 2)}</strong></span>
+              <span>L: <strong style={{ color: 'var(--accent-red)' }}>{safeToFixed(ohlc.low, 2)}</strong></span>
+              <span>C: <strong style={{ color: (ohlc.close ?? 0) >= (ohlc.open ?? 0) ? 'var(--accent-green)' : 'var(--accent-red)' }}>{safeToFixed(ohlc.close, 2)}</strong></span>
             </div>
           )}
         </div>

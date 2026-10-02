@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMarketStore } from '../../stores/marketStore';
+import { safeToFixed } from '../../utils/formatters';
 
 const TICKER_SYMBOLS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'ETHUSD', 'US30', 'SPX500', 'USOIL', 'XAGUSD'];
 
@@ -9,13 +10,14 @@ const BottomTicker: React.FC = () => {
 
   const items = TICKER_SYMBOLS.map(sym => {
     const live = marketDataMap[sym];
-    const price = live ? live.price.toFixed(sym.includes('JPY') ? 3 : sym === 'EURUSD' || sym === 'GBPUSD' ? 4 : 2) : '---';
-    const chgPercent = live ? live.changePercent : 0;
+    const decimals = sym.includes('JPY') ? 3 : sym === 'EURUSD' || sym === 'GBPUSD' ? 4 : 2;
+    const price = live?.price !== undefined ? safeToFixed(live.price, decimals, '---') : '---';
+    const chgPercent = live?.changePercent !== undefined ? live.changePercent : 0;
     const isPositive = chgPercent >= 0;
     return {
       symbol: sym,
       price,
-      change: `${isPositive ? '+' : ''}${chgPercent.toFixed(2)}%`,
+      change: `${isPositive ? '+' : ''}${safeToFixed(chgPercent, 2)}%`,
       isPositive
     };
   });

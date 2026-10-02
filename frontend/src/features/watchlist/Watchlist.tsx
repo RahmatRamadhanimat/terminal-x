@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Panel from '../../components/layout/Panel';
 import { useMarketStore } from '../../stores/marketStore';
+import { safeToFixed } from '../../utils/formatters';
 
 interface WatchlistItem {
   symbol: string;
@@ -96,10 +97,10 @@ const Watchlist: React.FC = () => {
                       {row.symbol}
                     </td>
                     <td className="p-1 text-right font-mono">
-                      {price.toFixed(decimals)}
+                      {safeToFixed(price, decimals)}
                     </td>
                     <td className="p-1 text-right font-mono font-semibold" style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                      {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+                      {isPositive ? '+' : ''}{safeToFixed(changePercent, 2)}%
                     </td>
                   </tr>
                 );
